@@ -1,0 +1,367 @@
+{
+  "name": "GaN Charger Price Watch",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 24
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Daily at 9 AM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://www.amazon.com/dp/B0DRCZZ7HH",
+        "options": {
+          "redirect": {
+            "redirect": {}
+          }
+        },
+        "sendHeaders": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            },
+            {
+              "name": "Accept-Language",
+              "value": "en-US,en;q=0.9"
+            }
+          ]
+        }
+      },
+      "id": "http-amazon-w320",
+      "name": "Fetch Amazon: 320W GaN",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [450, 200]
+    },
+    {
+      "parameters": {
+        "url": "https://www.amazon.com/dp/B0CT2NQ7WG",
+        "sendHeaders": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            },
+            {
+              "name": "Accept-Language",
+              "value": "en-US,en;q=0.9"
+            }
+          ]
+        }
+      },
+      "id": "http-amazon-anker200",
+      "name": "Fetch Amazon: Anker 200W",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [450, 350]
+    },
+    {
+      "parameters": {
+        "url": "https://www.amazon.com/dp/B09C5RG6KV",
+        "sendHeaders": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            },
+            {
+              "name": "Accept-Language",
+              "value": "en-US,en;q=0.9"
+            }
+          ]
+        }
+      },
+      "id": "http-amazon-anker65",
+      "name": "Fetch Amazon: Anker 65W",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [450, 500]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract first 8000 chars of HTML for LLM parsing\nconst html = $input.item.json.body || $input.item.json;\nconst trimmed = typeof html === 'string' ? html.substring(0, 8000) : JSON.stringify(html).substring(0, 8000);\nreturn { html: trimmed, asin: 'B0DRCZZ7HH', name: '320W GaN Charger', threshold: parseFloat($env.THRESHOLD_320W || '45') };"
+      },
+      "id": "code-prep-w320",
+      "name": "Prepare: 320W GaN",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [650, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const html = $input.item.json.body || $input.item.json;\nconst trimmed = typeof html === 'string' ? html.substring(0, 8000) : JSON.stringify(html).substring(0, 8000);\nreturn { html: trimmed, asin: 'B0CT2NQ7WG', name: 'Anker Prime 200W', threshold: parseFloat($env.THRESHOLD_ANKER_200W || '55') };"
+      },
+      "id": "code-prep-anker200",
+      "name": "Prepare: Anker 200W",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [650, 350]
+    },
+    {
+      "parameters": {
+        "jsCode": "const html = $input.item.json.body || $input.item.json;\nconst trimmed = typeof html === 'string' ? html.substring(0, 8000) : JSON.stringify(html).substring(0, 8000);\nreturn { html: trimmed, asin: 'B09C5RG6KV', name: 'Anker 65W GaN', threshold: parseFloat($env.THRESHOLD_ANKER_65W || '25') };"
+      },
+      "id": "code-prep-anker65",
+      "name": "Prepare: Anker 65W",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [650, 500]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.LLM_ENDPOINT || 'http://localhost:11434/api/generate' }}",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "={{ $env.LLM_MODEL || 'llama3.2' }}"
+            },
+            {
+              "name": "prompt",
+              "value": "=You are a price extraction tool. Extract the CURRENT PRICE from this Amazon product page HTML. Look for price patterns like $XX.XX or $XXX.XX. Return ONLY a valid JSON object: {\"price\": number_or_null, \"currency\": \"USD\", \"found\": true_or_false}. Do not include any other text.\n\nHTML:\n{{ $json.html }}"
+            },
+            {
+              "name": "stream",
+              "value": false
+            }
+          ]
+        }
+      },
+      "id": "llm-w320",
+      "name": "LLM Extract: 320W",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [850, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.LLM_ENDPOINT || 'http://localhost:11434/api/generate' }}",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "={{ $env.LLM_MODEL || 'llama3.2' }}"
+            },
+            {
+              "name": "prompt",
+              "value": "=You are a price extraction tool. Extract the CURRENT PRICE from this Amazon product page HTML. Look for price patterns like $XX.XX or $XXX.XX. Return ONLY a valid JSON object: {\"price\": number_or_null, \"currency\": \"USD\", \"found\": true_or_false}. Do not include any other text.\n\nHTML:\n{{ $json.html }}"
+            },
+            {
+              "name": "stream",
+              "value": false
+            }
+          ]
+        }
+      },
+      "id": "llm-anker200",
+      "name": "LLM Extract: Anker 200W",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [850, 350]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.LLM_ENDPOINT || 'http://localhost:11434/api/generate' }}",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "={{ $env.LLM_MODEL || 'llama3.2' }}"
+            },
+            {
+              "name": "prompt",
+              "value": "=You are a price extraction tool. Extract the CURRENT PRICE from this Amazon product page HTML. Look for price patterns like $XX.XX or $XXX.XX. Return ONLY a valid JSON object: {\"price\": number_or_null, \"currency\": \"USD\", \"found\": true_or_false}. Do not include any other text.\n\nHTML:\n{{ $json.html }}"
+            },
+            {
+              "name": "stream",
+              "value": false
+            }
+          ]
+        }
+      },
+      "id": "llm-anker65",
+      "name": "LLM Extract: Anker 65W",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [850, 500]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse LLM response and compare to threshold\nconst llmResponse = $input.item.json.response || $input.item.json;\nlet parsed;\ntry {\n  parsed = JSON.parse(llmResponse);\n} catch(e) {\n  // Try to extract JSON from response\n  const match = llmResponse.match(/\\{[^}]+\\}/);\n  parsed = match ? JSON.parse(match[0]) : { price: null, found: false };\n}\n\nconst threshold = $input.item.json.threshold || 999;\nconst isDeal = parsed.found && parsed.price !== null && parsed.price < threshold;\n\nreturn {\n  product: $input.item.json.name || 'Unknown',\n  asin: $input.item.json.asin,\n  price: parsed.price,\n  threshold: threshold,\n  isDeal: isDeal,\n  found: parsed.found\n};"
+      },
+      "id": "code-compare-w320",
+      "name": "Compare: 320W",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1050, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const llmResponse = $input.item.json.response || $input.item.json;\nlet parsed;\ntry {\n  parsed = JSON.parse(llmResponse);\n} catch(e) {\n  const match = llmResponse.match(/\\{[^}]+\\}/);\n  parsed = match ? JSON.parse(match[0]) : { price: null, found: false };\n}\n\nconst threshold = $input.item.json.threshold || 999;\nconst isDeal = parsed.found && parsed.price !== null && parsed.price < threshold;\n\nreturn {\n  product: $input.item.json.name || 'Unknown',\n  asin: $input.item.json.asin,\n  price: parsed.price,\n  threshold: threshold,\n  isDeal: isDeal,\n  found: parsed.found\n};"
+      },
+      "id": "code-compare-anker200",
+      "name": "Compare: Anker 200W",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1050, 350]
+    },
+    {
+      "parameters": {
+        "jsCode": "const llmResponse = $input.item.json.response || $input.item.json;\nlet parsed;\ntry {\n  parsed = JSON.parse(llmResponse);\n} catch(e) {\n  const match = llmResponse.match(/\\{[^}]+\\}/);\n  parsed = match ? JSON.parse(match[0]) : { price: null, found: false };\n}\n\nconst threshold = $input.item.json.threshold || 999;\nconst isDeal = parsed.found && parsed.price !== null && parsed.price < threshold;\n\nreturn {\n  product: $input.item.json.name || 'Unknown',\n  asin: $input.item.json.asin,\n  price: parsed.price,\n  threshold: threshold,\n  isDeal: isDeal,\n  found: parsed.found\n};"
+      },
+      "id": "code-compare-anker65",
+      "name": "Compare: Anker 65W",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1050, 500]
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combinationMode": "multiplex",
+        "options": {}
+      },
+      "id": "merge-results",
+      "name": "Merge All Results",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [1250, 350]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "deal-check",
+              "leftValue": "={{ $json.isDeal }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        }
+      },
+      "id": "if-deal",
+      "name": "Any Deal?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1450, 350]
+    },
+    {
+      "parameters": {
+        "fromEmail": "johnmccarley4@gmail.com",
+        "toEmail": "johnmccarley4@gmail.com",
+        "subject": "=⚡ Price Drop Alert: {{ $json.product }} — ${{ $json.price }}",
+        "text": "=Product: {{ $json.product }}\nASIN: {{ $json.asin }}\nCurrent Price: ${{ $json.price }}\nThreshold: ${{ $json.threshold }}\n\nAmazon: https://www.amazon.com/dp/{{ $json.asin }}\nCamelCamelCamel: https://camelcamelcamel.com/product/{{ $json.asin }}"
+      },
+      "id": "email-alert",
+      "name": "Send Email Alert",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1650, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Log all prices for record-keeping\nconst items = $input.all();\nconst summary = items.map(item => ({\n  product: item.json.product,\n  price: item.json.price,\n  threshold: item.json.threshold,\n  isDeal: item.json.isDeal,\n  found: item.json.found\n}));\n\nreturn {\n  timestamp: new Date().toISOString(),\n  checked: summary,\n  deals: summary.filter(s => s.isDeal)\n};"
+      },
+      "id": "code-summary",
+      "name": "Log Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1450, 550]
+    }
+  ],
+  "connections": {
+    "Daily at 9 AM": {
+      "main": [
+        [
+          { "node": "Fetch Amazon: 320W GaN", "type": "main", "index": 0 },
+          { "node": "Fetch Amazon: Anker 200W", "type": "main", "index": 0 },
+          { "node": "Fetch Amazon: Anker 65W", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Fetch Amazon: 320W GaN": {
+      "main": [[{ "node": "Prepare: 320W GaN", "type": "main", "index": 0 }]]
+    },
+    "Fetch Amazon: Anker 200W": {
+      "main": [[{ "node": "Prepare: Anker 200W", "type": "main", "index": 0 }]]
+    },
+    "Fetch Amazon: Anker 65W": {
+      "main": [[{ "node": "Prepare: Anker 65W", "type": "main", "index": 0 }]]
+    },
+    "Prepare: 320W GaN": {
+      "main": [[{ "node": "LLM Extract: 320W", "type": "main", "index": 0 }]]
+    },
+    "Prepare: Anker 200W": {
+      "main": [[{ "node": "LLM Extract: Anker 200W", "type": "main", "index": 0 }]]
+    },
+    "Prepare: Anker 65W": {
+      "main": [[{ "node": "LLM Extract: Anker 65W", "type": "main", "index": 0 }]]
+    },
+    "LLM Extract: 320W": {
+      "main": [[{ "node": "Compare: 320W", "type": "main", "index": 0 }]]
+    },
+    "LLM Extract: Anker 200W": {
+      "main": [[{ "node": "Compare: Anker 200W", "type": "main", "index": 0 }]]
+    },
+    "LLM Extract: Anker 65W": {
+      "main": [[{ "node": "Compare: Anker 65W", "type": "main", "index": 0 }]]
+    },
+    "Compare: 320W": {
+      "main": [[{ "node": "Merge All Results", "type": "main", "index": 0 }]]
+    },
+    "Compare: Anker 200W": {
+      "main": [[{ "node": "Merge All Results", "type": "main", "index": 1 }]]
+    },
+    "Compare: Anker 65W": {
+      "main": [[{ "node": "Merge All Results", "type": "main", "index": 2 }]]
+    },
+    "Merge All Results": {
+      "main": [[{ "node": "Any Deal?", "type": "main", "index": 0 }]]
+    },
+    "Any Deal?": {
+      "main": [
+        [{ "node": "Send Email Alert", "type": "main", "index": 0 }],
+        [{ "node": "Log Summary", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "callerPolicy": "workflowsFromSameOwner",
+    "timezone": "America/New_York",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true
+  },
+  "staticData": null,
+  "pinData": {},
+  "versionId": "1.0.0",
+  "active": false
+}
